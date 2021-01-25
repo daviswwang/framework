@@ -12,6 +12,7 @@ use Closure;
 use ArrayAccess;
 use Ex\Exception\Container\ContainerException;
 use ReflectionClass;
+use ReflectionParameter;
 use Ex\Contracts\Container\Container as ContainerContract;
 
 class Container implements ArrayAccess, ContainerContract
@@ -59,10 +60,17 @@ class Container implements ArrayAccess, ContainerContract
         }
     }
 
+    /**
+     * 获取闭包
+     * @param $abstract
+     * @param $concrete
+     * @return Closure
+     * @author: fanxinyu
+     */
     public function getClosure($abstract, $concrete)
     {
         return function ($container, $parameters = []) use ($abstract, $concrete) {
-            if ($abstract == $concrete)
+            if ($abstract == $concrete) //相等为闭包
                 return $container->build($concrete);
             return $container->make($abstract, $parameters);
         };
@@ -196,6 +204,12 @@ class Container implements ArrayAccess, ContainerContract
     }
 
 
+    /**
+     * 判断是否为共享类
+     * @param $abstract
+     * @return bool
+     * @author: fanxinyu
+     */
     public function isShared($abstract)
     {
         return isset($this->instances[$abstract]) ||
@@ -207,18 +221,31 @@ class Container implements ArrayAccess, ContainerContract
     {
         $abstract = $this->getAlias($abstract);
 
-        if (isset($this->extenders[$abstract])) {
-            return $this->extenders[$abstract];
-        }
+//        if (isset($this->extenders[$abstract])) {
+//            return $this->extenders[$abstract];
+//        }
 
         return [];
     }
 
+    /**
+     * 判断是否为闭包
+     * @param $concrete
+     * @param $abstract
+     * @return bool
+     * @author: fanxinyu
+     */
     protected function isBuildable($concrete, $abstract)
     {
         return $concrete === $abstract || $concrete instanceof Closure;
     }
 
+    /**
+     * 拿到容器内的闭包实例
+     * @param $abstract
+     * @return mixed
+     * @author: fanxinyu
+     */
     protected function getConcrete($abstract)
     {
 
@@ -230,17 +257,25 @@ class Container implements ArrayAccess, ContainerContract
     }
 
 
+    /**
+     * 解析依赖项
+     * @param array $dependencies
+     * @return array
+     * @author: fanxinyu
+     */
     protected function resolveDependencies(array $dependencies)
     {
         $results = [];
 
         //循环参数
         foreach ($dependencies as $dependency) {
-            if ($this->hasParameterOverride($dependency)) {
-                $results[] = $this->getParameterOverride($dependency);
 
-                continue;
-            }
+            //判断是否在 with (容器)内 如果在,就直接拿,放入数组中
+//            if ($this->hasParameterOverride($dependency)) {
+//                $results[] = $this->getParameterOverride($dependency);
+//
+//                continue;
+//            }
 
             $results[] = is_null($dependency->getClass())
                 ? $this->resolvePrimitive($dependency)
@@ -248,6 +283,11 @@ class Container implements ArrayAccess, ContainerContract
         }
 
         return $results;
+    }
+
+    protected function resolveClass(ReflectionParameter $parameter)
+    {
+        return $this->make($parameter->getClass()->name);   //获取类并返回类名,然后make解析
     }
 
     protected function notInstantiable($concrete)
