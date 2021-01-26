@@ -277,13 +277,29 @@ class Container implements ArrayAccess, ContainerContract
 //                continue;
 //            }
 
+            // 如果依赖不是类
             $results[] = is_null($dependency->getClass())
-                ? $this->resolvePrimitive($dependency)
+                ? $dependency
+//                ? $this->resolvePrimitive($dependency)
                 : $this->resolveClass($dependency); //循环调用make方法
         }
 
         return $results;
     }
+
+
+//    protected function resolvePrimitive(ReflectionParameter $parameter)
+//    {
+//        if (! is_null($concrete = $this->getContextualConcrete('$'.$parameter->name))) {
+//            return $concrete instanceof Closure ? $concrete($this) : $concrete;
+//        }
+//
+//        if ($parameter->isDefaultValueAvailable()) {
+//            return $parameter->getDefaultValue();
+//        }
+//
+//        $this->unresolvablePrimitive($parameter);
+//    }
 
     protected function resolveClass(ReflectionParameter $parameter)
     {
